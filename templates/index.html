@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BigQuery Release Notes Explorer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="icon" type="image/png" href="https://www.gstatic.com/images/branding/product/1x/bigquery_64dp.png">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Filters -->
+        <aside class="sidebar">
+            <div class="brand">
+                <img src="https://www.gstatic.com/images/branding/product/1x/bigquery_64dp.png" alt="BigQuery Logo" class="brand-logo">
+                <div class="brand-text">
+                    <h1>BQ Explorer</h1>
+                    <span>Release Monitor</span>
+                </div>
+            </div>
+
+            <div class="filter-section">
+                <h3>Search Updates</h3>
+                <div class="search-box">
+                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" id="search-input" placeholder="Filter by keyword...">
+                </div>
+            </div>
+
+            <div class="filter-section">
+                <h3>Filter by Type</h3>
+                <div class="filter-buttons">
+                    <button class="filter-btn active" data-type="all">
+                        <span class="dot all"></span> All Updates
+                    </button>
+                    <button class="filter-btn" data-type="feature">
+                        <span class="dot feature"></span> Features
+                    </button>
+                    <button class="filter-btn" data-type="announcement">
+                        <span class="dot announcement"></span> Announcements
+                    </button>
+                    <button class="filter-btn" data-type="issue">
+                        <span class="dot issue"></span> Issues
+                    </button>
+                    <button class="filter-btn" data-type="breaking">
+                        <span class="dot breaking"></span> Breaking
+                    </button>
+                    <button class="filter-btn" data-type="change">
+                        <span class="dot change"></span> Changes
+                    </button>
+                </div>
+            </div>
+
+            <div class="sidebar-footer">
+                <p>Status: <span id="status-badge" class="status-online">Online</span></p>
+                <p class="copyright">&copy; 2026 BQ Release Monitor</p>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <header class="content-header">
+                <div class="header-title">
+                    <h2>BigQuery Release Notes</h2>
+                    <p>Track the latest features, enhancements, and announcements from Google Cloud BigQuery.</p>
+                </div>
+                <div class="header-actions">
+                    <button id="refresh-btn" class="btn btn-primary">
+                        <svg class="icon refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
+                        </svg>
+                        <span>Refresh Notes</span>
+                    </button>
+                </div>
+            </header>
+
+            <div class="content-body">
+                <!-- Loader -->
+                <div id="loader" class="loader-container">
+                    <div class="spinner"></div>
+                    <p>Fetching latest release notes from Google Cloud...</p>
+                </div>
+
+                <!-- Error Alert -->
+                <div id="error-alert" class="alert alert-error hidden">
+                    <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
+                    <div class="alert-message">
+                        <h4>Failed to Fetch Release Notes</h4>
+                        <p id="error-message">An error occurred while contacting the server.</p>
+                    </div>
+                    <button id="error-retry-btn" class="btn btn-outline btn-sm">Try Again</button>
+                </div>
+
+                <!-- Empty State -->
+                <div id="empty-state" class="empty-state hidden">
+                    <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                    <h3>No Release Notes Found</h3>
+                    <p>No release notes matched your search query or filter type.</p>
+                </div>
+
+                <!-- Feed Container -->
+                <div id="feed-container" class="feed-timeline">
+                    <!-- Cards will be dynamically injected here -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Tweet Customization Modal -->
+    <div id="tweet-modal" class="modal-overlay hidden">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Draft Tweet</h3>
+                <button class="modal-close" id="modal-close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-instruction">Customize your tweet before posting it to X (Twitter):</p>
+                <div class="tweet-composer-container">
+                    <textarea id="tweet-textarea" rows="6" maxlength="280"></textarea>
+                    <div class="char-counter">
+                        <span id="char-count">0</span> / 280
+                    </div>
+                </div>
+                <div class="tweet-preview-box">
+                    <div class="preview-header">
+                        <img src="https://www.gstatic.com/images/branding/product/1x/bigquery_64dp.png" alt="BigQuery" class="preview-avatar">
+                        <div class="preview-user">
+                            <span class="preview-name">Google Cloud Dev</span>
+                            <span class="preview-handle">@GCPDev</span>
+                        </div>
+                    </div>
+                    <div class="preview-text" id="tweet-preview-text">
+                        <!-- Preview text will be mirrored here -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="copy-tweet-btn" class="btn btn-secondary">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                    Copy Text
+                </button>
+                <button id="post-tweet-btn" class="btn btn-twitter">
+                    <!-- Twitter / X Logo SVG -->
+                    <svg class="icon icon-twitter" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path>
+                    </svg>
+                    Post to X
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="toast hidden">
+        <span id="toast-message">Message copied to clipboard!</span>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
