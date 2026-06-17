@@ -12,6 +12,7 @@ const errorRetryBtn = document.getElementById('error-retry-btn');
 const emptyState = document.getElementById('empty-state');
 const refreshBtn = document.getElementById('refresh-btn');
 const refreshIcon = refreshBtn.querySelector('.refresh-icon');
+const exportCsvBtn = document.getElementById('export-csv-btn');
 const searchInput = document.getElementById('search-input');
 const filterBtns = document.querySelectorAll('.filter-btn');
 
@@ -34,9 +35,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Event Listeners Setup
 function setupEventListeners() {
-    // Refresh buttons
+    // Refresh & Export buttons
     refreshBtn.addEventListener('click', fetchReleaseNotes);
     errorRetryBtn.addEventListener('click', fetchReleaseNotes);
+    if (exportCsvBtn) {
+        exportCsvBtn.addEventListener('click', exportToCSV);
+    }
 
     // Search filter
     searchInput.addEventListener('input', (e) => {
@@ -200,8 +204,27 @@ function renderFeed() {
                 typeBadge.className = `update-type-badge ${lowerType}`;
                 typeBadge.textContent = update.type;
 
+                const cardActions = document.createElement('div');
+                cardActions.className = 'card-actions';
+
+                const copyCardBtn = document.createElement('button');
+                copyCardBtn.className = 'btn btn-secondary btn-sm';
+                copyCardBtn.innerHTML = `
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                    Copy
+                `;
+                copyCardBtn.addEventListener('click', () => {
+                    const plainText = stripHtml(update.content);
+                    navigator.clipboard.writeText(plainText)
+                        .then(() => showToast('Update copied to clipboard!'))
+                        .catch(() => showToast('Failed to copy.'));
+                });
+
                 const tweetBtn = document.createElement('button');
-                tweetBtn.className = 'btn btn-secondary btn-sm card-tweet-btn';
+                tweetBtn.className = 'btn btn-secondary btn-sm';
                 tweetBtn.innerHTML = `
                     <svg class="icon icon-twitter" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path>
@@ -214,8 +237,11 @@ function renderFeed() {
                     openTweetModal(entry.date, update.type, stripHtml(update.content), entry.link);
                 });
 
+                cardActions.appendChild(copyCardBtn);
+                cardActions.appendChild(tweetBtn);
+
                 cardHeader.appendChild(typeBadge);
-                cardHeader.appendChild(tweetBtn);
+                cardHeader.appendChild(cardActions);
 
                 const cardBody = document.createElement('div');
                 cardBody.className = 'update-body';
@@ -330,4 +356,46 @@ function showEmptyState() {
 
 function hideEmptyState() {
     emptyState.classList.add('hidden');
+}
+
+// Export to CSV Functionality
+function exportToCSV() {
+    let csvRows = ['Date,Type,Description,Link'];
+    let count = 0;
+    
+    releaseNotes.forEach(entry => {
+        const filteredUpdates = entry.updates.filter(update => {
+            const matchesType = (currentFilter === 'all') || (update.type.toLowerCase() === currentFilter);
+            const rawText = stripHtml(update.content).toLowerCase();
+            const matchesSearch = (searchQuery === '') || rawText.includes(searchQuery);
+            return matchesType && matchesSearch;
+        });
+        
+        filteredUpdates.forEach(update => {
+            const date = entry.date.replace(/"/g, '""');
+            const type = update.type.replace(/"/g, '""');
+            const desc = stripHtml(update.content).trim().replace(/"/g, '""');
+            const link = (entry.link || '').replace(/"/g, '""');
+            
+            csvRows.push(`"${date}","${type}","${desc}","${link}"`);
+            count++;
+        });
+    });
+    
+    if (count === 0) {
+        showToast('No updates to export!');
+        return;
+    }
+    
+    const csvString = csvRows.join('\r\n');
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `bq_release_notes_${currentFilter}_export.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast(`Exported ${count} items to CSV!`);
 }

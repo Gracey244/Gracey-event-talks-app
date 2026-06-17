@@ -236,6 +236,11 @@ body {
     flex-shrink: 0;
 }
 
+.header-actions {
+    display: flex;
+    gap: 12px;
+}
+
 .header-title h2 {
     font-family: var(--font-heading);
     font-size: 1.5rem;
@@ -559,13 +564,15 @@ body {
     color: var(--color-text-primary);
 }
 
-/* Action: Tweet button */
-.card-tweet-btn {
+/* Action Buttons container */
+.card-actions {
+    display: flex;
+    gap: 8px;
     opacity: 0;
     transition: var(--transition-smooth);
 }
 
-.update-card:hover .card-tweet-btn {
+.update-card:hover .card-actions {
     opacity: 1;
 }
 
